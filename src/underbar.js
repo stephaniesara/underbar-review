@@ -185,17 +185,12 @@
   _.contains = function(collection, target) {
     // TIP: Many iteration problems can be most easily expressed in
     // terms of reduce(). Here's a freebie to demonstrate!
-    console.log(collection);
-    console.log(target);
     return _.reduce(
       collection,
       function(wasFound, item) {
-        console.log('in here');
-        console.log(wasFound, item);
         if (wasFound) {
           return true;
         }
-        console.log(item === target, item, target);
         return item === target;
       },
       false
@@ -203,14 +198,24 @@
   };
 
   // Determine whether all of the elements match a truth test.
-  _.every = function(collection, iterator) {
+  _.every = function(collection, iterator = _.identity) {
     // TIP: Try re-using reduce() here.
+    return _.reduce(
+      collection,
+      function(accum, curr) {
+        return !!(accum && iterator(curr));
+      },
+      true
+    );
   };
 
   // Determine whether any of the elements pass a truth test. If no iterator is
   // provided, provide a default one
-  _.some = function(collection, iterator) {
+  _.some = function(collection, iterator = _.identity) {
     // TIP: There's a very clever way to re-use every() here.
+    return !_.every(collection, function(elem) {
+      return !iterator(elem);
+    });
   };
 
   /**
@@ -231,11 +236,35 @@
   //   }, {
   //     bla: "even more stuff"
   //   }); // obj1 now contains key1, key2, key3 and bla
-  _.extend = function(obj) {};
+  _.extend = function(obj) {
+    var args = Array.prototype.slice.call(arguments);
+    for (var i = 1; i < args.length; i++) {
+      var sourceObj = args[i];
+      var sourceObjKeys = Object.keys(sourceObj);
+      for (var j = 0; j < sourceObjKeys.length; j++) {
+        var key = sourceObjKeys[j];
+        obj[key] = sourceObj[key];
+      }
+    }
+    return obj;
+  };
 
   // Like extend, but doesn't ever overwrite a key that already
   // exists in obj
-  _.defaults = function(obj) {};
+  _.defaults = function(obj) {
+    var args = Array.prototype.slice.call(arguments);
+    for (var i = 1; i < args.length; i++) {
+      var sourceObj = args[i];
+      var sourceObjKeys = Object.keys(sourceObj);
+      for (var j = 0; j < sourceObjKeys.length; j++) {
+        var key = sourceObjKeys[j];
+        if (obj[key] === undefined) {
+          obj[key] = sourceObj[key];
+        }
+      }
+    }
+    return obj;
+  };
 
   /**
    * FUNCTIONS
@@ -276,7 +305,18 @@
   // _.memoize should return a function that, when called, will check if it has
   // already computed the result for the given argument and return that value
   // instead if possible.
-  _.memoize = function(func) {};
+  _.memoize = function(func) {
+    var results = {};
+    return function() {
+      var key = func.toString() + JSON.stringify(arguments);
+      if (!results[key]) {
+        var result = func.apply(this, arguments);
+        results[key] = result;
+        return result;
+      }
+      return results[key];
+    };
+  };
 
   // Delays a function for the given number of milliseconds, and then calls
   // it with the arguments supplied.
@@ -284,7 +324,12 @@
   // The arguments for the original function are passed after the wait
   // parameter. For example _.delay(someFunction, 500, 'a', 'b') will
   // call someFunction('a', 'b') after 500ms
-  _.delay = function(func, wait) {};
+  _.delay = function(func, wait) {
+    var args = Array.prototype.slice.call(arguments).slice(2);
+    setTimeout(function() {
+      func.apply(this, args);
+    }, wait);
+  };
 
   /**
    * ADVANCED COLLECTION OPERATIONS
@@ -296,7 +341,16 @@
   // TIP: This function's test suite will ask that you not modify the original
   // input array. For a tip on how to make a copy of an array, see:
   // http://mdn.io/Array.prototype.slice
-  _.shuffle = function(array) {};
+  _.shuffle = function(array) {
+    var result = [];
+    var old = array.slice();
+    for (var i = 0; i < array.length; i++) {
+      var randInd = Math.floor(Math.random() * old.length);
+      result.push(old[randInd]);
+      old.splice(randInd, 1);
+    }
+    return result;
+  };
 
   /**
    * ADVANCED

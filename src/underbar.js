@@ -362,20 +362,51 @@
 
   // Calls the method named by functionOrKey on each value in the list.
   // Note: You will need to learn a bit about .apply to complete this.
-  _.invoke = function(collection, functionOrKey, args) {};
+  _.invoke = function(collection, functionOrKey, args) {
+    var func =
+      typeof functionOrKey === 'string'
+        ? String.prototype[functionOrKey]
+        : functionOrKey;
+    return _.map(collection, function(elem) {
+      return func.apply(elem, args);
+    });
+  };
 
   // Sort the object's values by a criterion produced by an iterator.
   // If iterator is a string, sort objects by that property with the name
   // of that string. For example, _.sortBy(people, 'name') should sort
   // an array of people by their name.
-  _.sortBy = function(collection, iterator) {};
+  _.sortBy = function(collection, iterator) {
+    if (typeof iterator === 'string') {
+      // sort by prop
+      return collection.slice().sort(function(a, b) {
+        return a[iterator] - b[iterator];
+      });
+    } else {
+      // sort by func
+      return collection.slice().sort(function(a, b) {
+        return iterator(a) - iterator(b);
+      });
+    }
+  };
 
   // Zip together two or more arrays with elements of the same index
   // going together.
   //
   // Example:
   // _.zip(['a','b','c','d'], [1,2,3]) returns [['a',1], ['b',2], ['c',3], ['d',undefined]]
-  _.zip = function() {};
+  _.zip = function() {
+    var result = [];
+    var args = Array.prototype.slice.call(arguments);
+    for (var i = 0; i < args[0].length; i++) {
+      var newElem = [];
+      for (var j = 0; j < args.length; j++) {
+        newElem.push(args[j][i]);
+      }
+      result.push(newElem);
+    }
+    return result;
+  };
 
   // Takes a multidimensional array and converts it to a one-dimensional array.
   // The new array should contain all elements of the multidimensional array.

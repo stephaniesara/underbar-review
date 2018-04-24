@@ -101,15 +101,18 @@
 
   // Produce a duplicate-free version of the array.
   _.uniq = function(array, isSorted, iterator = _.identity) {
-    var result = [];
-    var iterated = [];
-    _.each(array, function(item) {
-      if (!iterated.includes(iterator(item))) {
-        result.push(item);
-        iterated.push(iterator(item));
+    var uniques = {};
+    _.each(array, elem => {
+      var key = iterator(elem);
+      if (!uniques[key]) {
+        uniques[key] = elem;
       }
     });
-    return result;
+    var results = [];
+    _.each(uniques, value => {
+      results.push(value);
+    });
+    return results;
   };
 
   // Return the results of applying an iterator to each element.
@@ -163,21 +166,13 @@
   //   }); // should be 5, regardless of the iterator function passed in
   //          No accumulator is given so the first element is used.
   _.reduce = function(collection, iterator, accumulator) {
-    var startInd = 0;
-    if (accumulator === undefined) {
-      accumulator = collection[0];
-      startInd = 1;
-    }
-    if (Array.isArray(collection)) {
-      for (var i = startInd; i < collection.length; i++) {
-        accumulator = iterator(accumulator, collection[i]);
+    _.each(collection, (elem, index) => {
+      if (index === 0 && accumulator === undefined) {
+        accumulator = elem;
+      } else {
+        accumulator = iterator(accumulator, elem);
       }
-    } else {
-      var arr = Object.keys(collection);
-      for (var i = startInd; i < arr.length; i++) {
-        accumulator = iterator(accumulator, collection[arr[i]]);
-      }
-    }
+    });
     return accumulator;
   };
 
@@ -237,32 +232,30 @@
   //     bla: "even more stuff"
   //   }); // obj1 now contains key1, key2, key3 and bla
   _.extend = function(obj) {
-    var args = Array.prototype.slice.call(arguments);
-    for (var i = 1; i < args.length; i++) {
-      var sourceObj = args[i];
-      var sourceObjKeys = Object.keys(sourceObj);
-      for (var j = 0; j < sourceObjKeys.length; j++) {
-        var key = sourceObjKeys[j];
-        obj[key] = sourceObj[key];
+    _.each(arguments, (sourceObj, index) => {
+      if (index !== 0) {
+        // optional check, doesn't actually change anything
+        _.each(sourceObj, (value, key) => {
+          obj[key] = value;
+        });
       }
-    }
+    });
     return obj;
   };
 
   // Like extend, but doesn't ever overwrite a key that already
   // exists in obj
   _.defaults = function(obj) {
-    var args = Array.prototype.slice.call(arguments);
-    for (var i = 1; i < args.length; i++) {
-      var sourceObj = args[i];
-      var sourceObjKeys = Object.keys(sourceObj);
-      for (var j = 0; j < sourceObjKeys.length; j++) {
-        var key = sourceObjKeys[j];
-        if (obj[key] === undefined) {
-          obj[key] = sourceObj[key];
-        }
+    _.each(arguments, (sourceObj, index) => {
+      if (index !== 0) {
+        // optional check, doesn't actually change anything
+        _.each(sourceObj, (value, key) => {
+          if (obj[key] === undefined) {
+            obj[key] = value;
+          }
+        });
       }
-    }
+    });
     return obj;
   };
 
@@ -308,11 +301,9 @@
   _.memoize = function(func) {
     var results = {};
     return function() {
-      var key = func.toString() + JSON.stringify(arguments);
+      var key = JSON.stringify(arguments);
       if (!results[key]) {
-        var result = func.apply(this, arguments);
-        results[key] = result;
-        return result;
+        results[key] = func.apply(this, arguments);
       }
       return results[key];
     };
@@ -325,7 +316,8 @@
   // parameter. For example _.delay(someFunction, 500, 'a', 'b') will
   // call someFunction('a', 'b') after 500ms
   _.delay = function(func, wait) {
-    var args = Array.prototype.slice.call(arguments).slice(2);
+    // var args = Array.prototype.slice.call(arguments).slice(2);
+    var args = Array.prototype.slice.call(arguments, 2);
     setTimeout(function() {
       func.apply(this, args);
     }, wait);
@@ -363,11 +355,9 @@
   // Calls the method named by functionOrKey on each value in the list.
   // Note: You will need to learn a bit about .apply to complete this.
   _.invoke = function(collection, functionOrKey, args) {
-    var func =
-      typeof functionOrKey === 'string'
-        ? String.prototype[functionOrKey]
-        : functionOrKey;
     return _.map(collection, function(elem) {
+      var func =
+        typeof functionOrKey === 'string' ? elem[functionOrKey] : functionOrKey;
       return func.apply(elem, args);
     });
   };
@@ -379,12 +369,12 @@
   _.sortBy = function(collection, iterator) {
     if (typeof iterator === 'string') {
       // sort by prop
-      return collection.slice().sort(function(a, b) {
+      return collection.sort(function(a, b) {
         return a[iterator] - b[iterator];
       });
     } else {
       // sort by func
-      return collection.slice().sort(function(a, b) {
+      return collection.sort(function(a, b) {
         return iterator(a) - iterator(b);
       });
     }
@@ -412,15 +402,62 @@
   // The new array should contain all elements of the multidimensional array.
   //
   // Hint: Use Array.isArray to check if something is an array
-  _.flatten = function(nestedArray, result) {};
+  _.flatten = function(nestedArray, result = []) {
+    if (!Array.isArray(nestedArray)) {
+      return result.push(nestedArray);
+    }
+    _.each(nestedArray, function(elem) {
+      _.flatten(elem, result);
+    });
+    return result;
+  };
 
   // Takes an arbitrary number of arrays and produces an array that contains
   // every item shared between all the passed-in arrays.
-  _.intersection = function() {};
+  _.intersection = function() {
+    var args = Array.prototype.slice.call(arguments);
+    var count = {};
+    _.each(args, arr => {
+      _.each(arr, elem => {
+        if (count[elem]) {
+          count[elem]++;
+        } else {
+          count[elem] = 1;
+        }
+      });
+    });
+    var result = [];
+    _.each(count, (value, key) => {
+      if (value === args.length) {
+        result.push(key);
+      }
+    });
+    return result;
+  };
 
   // Take the difference between one array and a number of other arrays.
   // Only the elements present in just the first array will remain.
-  _.difference = function(array) {};
+  _.difference = function(array) {
+    var tracker = {};
+    _.each(array, elem => {
+      tracker[elem] = true;
+    });
+    var arrays = Array.prototype.slice.call(arguments).slice(1);
+    _.each(arrays, arr => {
+      _.each(arr, elem => {
+        if (tracker[elem]) {
+          tracker[elem] = false;
+        }
+      });
+    });
+    var result = [];
+    _.each(tracker, (value, key) => {
+      if (value) {
+        result.push(JSON.parse(key));
+      }
+    });
+    return result;
+  };
 
   // Returns a function, that, when invoked, will only be triggered at most once
   // during a given window of time.  See the Underbar readme for extra details
